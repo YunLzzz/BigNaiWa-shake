@@ -918,3 +918,25 @@ body {
   .stage { height: 92vh; }
   .chain-box { display: none; }
 }
+
+/* 摇一摇只在触屏设备展示，独占一行，不挤占手机分数栏。 */
+.shake-controls[hidden] { display: none; }
+.shake-controls { display: flex; align-items: center; gap: 8px; width: 100%; }
+#shakeBtn { flex: 0 0 auto; font-size: 12px; padding: 8px 10px; }
+#shakeBtn[aria-pressed="true"] { background: #e5f4da; }
+#shakeStatus { color: var(--ink-soft); font-size: 11px; line-height: 1.4; }
+@media (max-width: 860px) and (orientation: portrait) {
+  body.shake-available { --topbar: 120px; }
+  .shake-available .panel { flex-wrap: wrap; }
+  .shake-controls { flex-basis: 100%; }
+  #shakeBtn { min-height: 38px; }
+}
+
+/* 保留原作者署名，在手机和电脑界面均可直接看到。 */
+.attribution { margin: 0; width: 100%; flex-basis: 100%; color: var(--ink-soft); font-size: 10px; line-height: 1.5; text-align: center; }
+.attribution a { color: inherit; text-underline-offset: 2px; }
+@media (max-width: 860px) and (orientation: portrait) {
+  :root { --topbar: 92px; }
+  .panel { flex-wrap: wrap; }
+  body.shake-available { --topbar: 144px; }
+}

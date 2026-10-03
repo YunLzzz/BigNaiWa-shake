@@ -64,7 +64,7 @@
           <div class="dialog-actions">
             <button class="btn" id="boardBtn2" type="button">🏆 排行榜</button>
             <button class="btn btn-primary" id="restartBtn" type="button">再来一局</button>
-            <button class="btn btn-sponsor btn-wide" id="sponsorBtn" type="button">🌶️ 可以赏作者一包辣条嘛</button>
+            <button class="btn btn-sponsor btn-wide" id="sponsorBtn" type="button">🌶️ 支持原作者 YHSome</button>
           </div>
           <p class="dialog-hint">按 R 键也可重新开始</p>
         </div>
@@ -115,12 +115,18 @@
       </button>
     </div>
 
+    <div class="shake-controls" id="shakeControls" hidden>
+      <button class="btn" id="shakeBtn" type="button" aria-pressed="false" aria-describedby="shakeStatus">📳 开启摇一摇</button>
+      <span id="shakeStatus" role="status" aria-live="polite">卡住了？轻摇手机试试</span>
+    </div>
+
     <p class="tips">
       鼠标：移动瞄准、点击投放；触屏：拖动瞄准、松手投放。<br>
       ← → 微调位置，空格投放，R 重开。<br>
       每 <strong>2000 分</strong>攒一枚<strong>复活币</strong>，只在本局有效。
     </p>
 
+    <p class="attribution">原作：<a href="https://github.com/YHSome/BigNaiWa" target="_blank" rel="noopener noreferrer">YHSome / BigNaiWa</a> · <a href="https://github.com/YunLzzz/BigNaiWa-shake" target="_blank" rel="noopener noreferrer">摇一摇改版：YunLzzz</a></p>
   </aside>
 
 </main>
@@ -149,7 +155,7 @@
 <div class="modal" id="sponsorModal" aria-hidden="true" role="dialog" aria-label="赞助作者">
   <div class="modal-card">
     <header class="modal-head">
-      <h2>🌶️ 请作者吃包辣条</h2>
+      <h2>🌶️ 请原作者 YHSome 吃包辣条</h2>
       <button class="icon-btn" id="sponsorClose" type="button" aria-label="关闭">✕</button>
     </header>
     <div class="sponsor-body">
@@ -171,6 +177,7 @@
 <!-- 极模糊占位图（内联 data URL，由 tools/make_blur.py 产出）：贴图没到位时先画它 -->
 <script src="assets/fruits/blur.js"></script>
 <script src="game.js"></script>
+<script src="shake.js"></script>
 <!-- 排行榜 -->
 <script src="leaderboard.min.js"></script>
 <!-- 赞助作者 -->

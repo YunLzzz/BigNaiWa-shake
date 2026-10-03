@@ -775,6 +775,7 @@
   }
 
   function reset() {
+    lastShakeAt = -Infinity;
     state.balls.length = 0;
     state.particles.length = 0;
     state.floats.length = 0;
@@ -1202,6 +1203,22 @@
    *  输入
    * ------------------------------------------------------- */
 
+  // 只给已落地的物体一个有上限的冲量，后续位移与合成仍走原有物理求解。
+  let lastShakeAt = -Infinity;
+  function shakeBoard() {
+    const now = performance.now();
+    if (state.over || state.freeze > 0 || touchAiming || document.hidden ||
+        document.querySelector('.modal[aria-hidden="false"]') || now - lastShakeAt < 2000) return false;
+    const settled = state.balls.filter(b => !b.dead && b.landed);
+    if (!settled.length) return false;
+    lastShakeAt = now;
+    for (const b of settled) {
+      b.vx = clamp(b.vx + rand(-180, 180), -240, 240);
+      b.vy = clamp(b.vy - rand(220, 290), -320, 120);
+    }
+    return true;
+  }
+
   function pointerToX(clientX) {
     const rect = canvas.getBoundingClientRect();
     return (clientX - rect.left) * (W / rect.width);
@@ -1386,7 +1403,7 @@
 
   /* 调试句柄（控制台可用）：__DNW__.state / .reset() / .drop() / .FRUITS / .render() */
   window.__DNW__ = { state, reset, revive, settle, gameOver, tryDrop, stepPhysics, update, FRUITS,
-                     render, resizeCanvas, shapeOf, makeBall, paintRevives, addScore,
+                     render, resizeCanvas, shapeOf, makeBall, paintRevives, addScore, shakeBoard,
                      MAX_BONUS, REVIVE_STEP,
                      blurReady: () => !!blurImg };
 })();
