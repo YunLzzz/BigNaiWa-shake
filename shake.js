@@ -1,116 +1,67 @@
-/* 手机摇一摇：显式开启、双向加速度确认，物理冲量由游戏本体负责。 */
+/* 历史文件名保留：此模块现为默认启用的倾斜重力，不再监听摇动。 */
 (function () {
   'use strict';
-  const controls = document.getElementById('shakeControls');
-  const button = document.getElementById('shakeBtn');
-  const status = document.getElementById('shakeStatus');
-  if (!controls || !(navigator.maxTouchPoints > 0)) return;
-  controls.hidden = false;
-  document.body.classList.add('shake-available');
-
-  let enabled = false, pending = false, gravity = null, peak = null;
-  let lastSample = -Infinity, lastTrigger = -Infinity, feedbackTimer, sensorTimer;
-  let gotSample = false;
-  const valid = a => a && [a.x, a.y, a.z].every(Number.isFinite);
-  const resetSamples = () => { gravity = null; peak = null; lastSample = -Infinity; };
-
-  function stop(message) {
-    enabled = false;
-    window.removeEventListener('devicemotion', onMotion);
-    clearTimeout(feedbackTimer);
-    clearTimeout(sensorTimer);
-    resetSamples();
-    button.textContent = '📳 开启摇一摇';
-    button.setAttribute('aria-pressed', 'false');
-    status.textContent = message;
+  const game = window.__DNW__;
+  const status = document.getElementById('tiltStatus');
+  if (!game || !status || !(navigator.maxTouchPoints > 0)) return;
+  status.hidden = false;
+  document.body.classList.add('tilt-available');
+  const Orientation = window.DeviceOrientationEvent;
+  if (!window.isSecureContext || !Orientation) {
+    status.textContent = '当前浏览器无法使用倾斜感应 · 保持竖直重力';
+    return;
   }
-
-  function onMotion(event) {
-    if (!enabled || document.hidden) return;
-    const now = performance.now();
-    if (now - lastSample > 500) resetSamples();
-    const dt = Math.max(0, now - lastSample);
-    lastSample = now;
-    let a = event.acceleration;
-    if (!valid(a)) {
-      const raw = event.accelerationIncludingGravity;
-      if (!valid(raw)) return;
-      if (!gravity) {
-        gravity = { x: raw.x, y: raw.y, z: raw.z };
-        a = { x: 0, y: 0, z: 0 };
-      } else {
-        // 时间相关低通估计重力，避免静止或缓慢转动触发。
-        const alpha = 1 - Math.exp(-dt / 250);
-        a = {};
-        for (const axis of ['x', 'y', 'z']) {
-          gravity[axis] += alpha * (raw[axis] - gravity[axis]);
-          a[axis] = raw[axis] - gravity[axis];
+  const readyText = '倾斜手机改变重力 · 最大 ±30°';
+  let received = false, timer;
+  function armTimeout() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      game.resetGravityTilt();
+      status.textContent = '未收到方向数据 · 暂用竖直重力';
+    }, 2500);
+  }
+  function reset() {
+    game.resetGravityTilt();
+    clearTimeout(timer);
+    if (!document.hidden) armTimeout();
+  }
+  window.addEventListener('deviceorientation', event => {
+    if (document.hidden || !Number.isFinite(event.beta) || !Number.isFinite(event.gamma)) return;
+    received = true;
+    const rad = Math.PI / 180;
+    const beta = event.beta * rad, gamma = event.gamma * rad;
+    const rotation = (window.screen?.orientation?.angle ?? window.orientation ?? 0) * rad;
+    // 地球重力在设备横轴上的分量，转换到当前屏幕坐标；不依赖指南针 alpha。
+    const right = Math.sin(gamma) * Math.cos(beta) * Math.cos(rotation) + Math.sin(beta) * Math.sin(rotation);
+    const degrees = Math.asin(Math.max(-1, Math.min(1, right))) / rad;
+    game.setGravityTilt(degrees);
+    if (status.textContent !== readyText) status.textContent = readyText;
+    armTimeout();
+  }, { passive: true });
+  document.addEventListener('visibilitychange', reset);
+  window.addEventListener('orientationchange', reset);
+  window.screen?.orientation?.addEventListener('change', reset);
+  if (typeof Orientation.requestPermission === 'function') {
+    status.textContent = '首次触摸游戏时允许方向权限 · 最大 ±30°';
+    // 浏览器要求可信用户手势；无需单独的开启按钮。
+    document.addEventListener('click', async () => {
+      if (received) return;
+      try {
+        const result = await Orientation.requestPermission();
+        if (result === 'granted') {
+          status.textContent = '倾斜感应就绪 · 等待方向数据';
+          armTimeout();
+        } else {
+          game.resetGravityTilt();
+          status.textContent = '方向权限未允许 · 暂用竖直重力';
         }
+      } catch (_) {
+        game.resetGravityTilt();
+        status.textContent = '方向权限不可用 · 暂用竖直重力';
       }
-    }
-    if (!gotSample) {
-      gotSample = true;
-      clearTimeout(sensorTimer);
-      status.textContent = '轻摇手机，帮奶蛙挪一挪';
-    }
-    const game = window.__DNW__;
-    if (!game || game.state.over || document.querySelector('.modal[aria-hidden="false"]') ||
-        now - lastTrigger < 2000) { peak = null; return; }
-    const strength = Math.hypot(a.x, a.y, a.z);
-    if (strength < 12) return;
-    if (!peak || now - peak.time > 600) {
-      peak = { ...a, strength, time: now };
-      return;
-    }
-    const dot = a.x * peak.x + a.y * peak.y + a.z * peak.z;
-    // 至少两次方向相反的加速，过滤一次性拿起手机和单次冲击。
-    if (now - peak.time >= 60 && dot < -0.3 * strength * peak.strength) {
-      peak = null;
-      if (game.shakeBoard()) {
-        lastTrigger = now;
-        status.textContent = '晃一下！2 秒后可再摇';
-        clearTimeout(feedbackTimer);
-        feedbackTimer = setTimeout(() => {
-          if (enabled) status.textContent = '轻摇手机，帮奶蛙挪一挪';
-        }, 2000);
-      }
-    }
+    }, { once: true, capture: true });
+  } else {
+    status.textContent = readyText;
+    armTimeout();
   }
-
-  button.addEventListener('click', async () => {
-    if (pending) return;
-    if (enabled) { stop('摇一摇已关闭'); return; }
-    if (!window.isSecureContext) {
-      status.textContent = '请用 HTTPS 链接打开后开启摇一摇';
-      return;
-    }
-    const Motion = window.DeviceMotionEvent;
-    if (!Motion) { status.textContent = '当前浏览器不支持摇一摇'; return; }
-    pending = true;
-    button.disabled = true;
-    try {
-      if (typeof Motion.requestPermission === 'function' &&
-          await Motion.requestPermission() !== 'granted') {
-        stop('未获运动权限，请在浏览器设置中允许后重试');
-        return;
-      }
-      enabled = true;
-      gotSample = false;
-      resetSamples();
-      button.textContent = '📳 摇一摇已开';
-      button.setAttribute('aria-pressed', 'true');
-      status.textContent = '等待手机传感器…';
-      window.addEventListener('devicemotion', onMotion, { passive: true });
-      sensorTimer = setTimeout(() => {
-        if (!gotSample) stop('未收到运动数据，请检查权限或换浏览器重试');
-      }, 5000);
-    } catch (err) {
-      stop('无法开启，请检查浏览器的运动权限后重试');
-    } finally {
-      pending = false;
-      button.disabled = false;
-    }
-  });
-  document.addEventListener('visibilitychange', resetSamples);
-  window.addEventListener('orientationchange', resetSamples);
 })();

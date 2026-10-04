@@ -41,7 +41,7 @@ const els = {};
  'reviveLeft', 'reviveBtn', 'giveUpBtn', 'reviveBadge', 'reviveCount',
  'boardBtn', 'boardBtn2', 'boardModal', 'boardList', 'boardClose', 'boardRefresh',
  'nickInput', 'myNameLabel', 'submitBtn', 'submitBox', 'submitMsg', 'editNameBtn',
- 'sponsorModal', 'sponsorBtn', 'sponsorClose', 'sponsorOk', 'shakeControls', 'shakeBtn', 'shakeStatus'
+ 'sponsorModal', 'sponsorBtn', 'sponsorClose', 'sponsorOk', 'tiltStatus'
 ].forEach((id) => { els[id] = makeEl(id); });
 els.revivePrompt.hidden = true;
 els.overPanel.hidden = false;
@@ -79,76 +79,43 @@ load('game.js');
 
 
 const G = sandbox.__DNW__;
-G.reset();
-assert.equal(G.shakeBoard(), false, 'empty board');
-const landed = G.makeBall(210, 650, 2);
-landed.landed = true;
-const falling = G.makeBall(110, 100, 1);
-G.state.balls.push(landed, falling);
-assert.equal(G.shakeBoard(), true);
-assert.ok(landed.vy <= -220 && landed.vy >= -320);
-assert.equal(falling.vy, 0, 'aim/falling pieces stay untouched');
-assert.equal(G.shakeBoard(), false, 'cooldown');
-const oldY = landed.y;
-G.update(1 / 60);
-assert.ok(landed.y < oldY, 'physics really moves fruit upward');
-now += 2100;
-G.state.over = true;
-assert.equal(G.shakeBoard(), false, 'game over');
-G.state.over = false;
-sandbox.document.hidden = true;
-assert.equal(G.shakeBoard(), false, 'background');
-sandbox.document.hidden = false;
-els.stage._h.pointerdown({ pointerType: 'touch', clientX: 200 });
-assert.equal(G.shakeBoard(), false, 'aiming');
-els.stage._h.pointercancel();
-assert.equal(G.shakeBoard(), true);
-
-// Exercise actual event subscription and permission flow using synthetic sensor data.
-sandbox.navigator.maxTouchPoints = 1;
-sandbox.isSecureContext = true;
-sandbox.document.body = makeEl('body');
-sandbox.removeEventListener = t => { delete winListeners[t]; };
-let requested = 0, shakes = 0;
-sandbox.DeviceMotionEvent = { requestPermission: async () => { requested++; return 'granted'; } };
-sandbox.__DNW__ = { state: { over: false }, shakeBoard: () => { shakes++; return true; } };
+function tick(n=120) { for(let i=0;i<n;i++) G.stepPhysics(1/120); }
+G.setGravityTilt(90); tick();
+assert.ok(G.getGravityTilt().angle > 29.9 && G.getGravityTilt().angle <= 30);
+G.setGravityTilt(-90); tick();
+assert.ok(G.getGravityTilt().angle < -29.9 && G.getGravityTilt().angle >= -30);
+G.reset(); G.resetGravityTilt(); G.setGravityTilt(30); tick();
+const b=G.makeBall(210,300,0); G.state.balls.push(b);
+G.stepPhysics(1/120);
+assert.ok(b.vx > 0 && b.vy > 0, 'rightward downward force');
+assert.ok(Math.abs(Math.hypot(b.vx,b.vy)*120-2600)<1, 'gravity magnitude unchanged');
+now+=2000; tick(); assert.ok(Math.abs(G.getGravityTilt().angle)<0.01,'stale sensor returns vertical');
+G.setGravityTilt(NaN);tick();assert.ok(Number.isFinite(b.x));
+G.reset(); G.resetGravityTilt();
+const docListeners={};
+sandbox.document.addEventListener=(t,fn)=>{docListeners[t]=fn;};
+sandbox.document.body=makeEl('body');sandbox.navigator.maxTouchPoints=1;
+sandbox.isSecureContext=true;sandbox.screen={orientation:{angle:0,addEventListener(){}}};
+sandbox.setTimeout=()=>1;sandbox.clearTimeout=()=>{};
+sandbox.DeviceOrientationEvent={};
 load('shake.js');
-async function click() { await els.shakeBtn._h.click(); }
-function motion(x, gravity = false) {
-  now += 100;
-  const event = gravity ? { acceleration: null, accelerationIncludingGravity: { x, y: 0, z: 9.8 } }
-    : { acceleration: { x, y: 0, z: 0 } };
-  winListeners.devicemotion(event);
-}
-(async () => {
-  await click();
-  assert.equal(requested, 1);
-  motion(1); motion(-1);
-  assert.equal(shakes, 0, 'small movements ignored');
-  motion(20);
-  assert.equal(shakes, 0, 'single impulse ignored');
-  motion(-20);
-  assert.equal(shakes, 1, 'back and forth triggers');
-  motion(20); motion(-20);
-  assert.equal(shakes, 1, 'cooldown suppresses repeat');
-  now += 2100;
-  motion(20); motion(-20);
-  assert.equal(shakes, 2, 'next shake after cooldown');
-  await click();
-  assert.equal(winListeners.devicemotion, undefined, 'switch off unsubscribes');
-  await click();
-  now += 2100;
-  motion(0, true); motion(0, true); motion(0, true);
-  assert.equal(shakes, 2, 'stationary gravity ignored');
-  motion(30, true); motion(-30, true);
-  assert.equal(shakes, 3, 'gravity fallback detects shake');
-  await click();
-  sandbox.DeviceMotionEvent.requestPermission = async () => 'denied';
-  await click();
-  assert.equal(winListeners.devicemotion, undefined, 'denied never subscribes');
-  assert.match(els.shakeStatus.textContent, /未获运动权限/);
-  sandbox.isSecureContext = false;
-  await click();
-  assert.match(els.shakeStatus.textContent, /HTTPS/);
-  console.log('摇一摇：物理位移、冷却、触屏互斥、后台与结束保护、授权、拒绝、重力过滤、双向触发全部通过');
-})().catch(err => { console.error(err); process.exitCode = 1; });
+assert.ok(winListeners.deviceorientation,'automatically listens without button');
+winListeners.deviceorientation({beta:0,gamma:20});
+assert.ok(Math.abs(G.getGravityTilt().target-20)<0.001);
+winListeners.deviceorientation({beta:0,gamma:-80});assert.equal(G.getGravityTilt().target,-30);
+sandbox.screen.orientation.angle=90;
+winListeners.deviceorientation({beta:20,gamma:0});assert.ok(Math.abs(G.getGravityTilt().target-20)<0.001);
+sandbox.screen.orientation.angle=270;
+winListeners.deviceorientation({beta:20,gamma:0});assert.ok(Math.abs(G.getGravityTilt().target+20)<0.001);
+winListeners.deviceorientation({beta:null,gamma:null});assert.ok(Number.isFinite(G.getGravityTilt().target));
+sandbox.document.hidden=true;docListeners.visibilitychange();assert.equal(G.getGravityTilt().angle,0);
+winListeners.deviceorientation({beta:40,gamma:40});assert.equal(G.getGravityTilt().target,0);
+sandbox.document.hidden=false;
+let requested=0;sandbox.DeviceOrientationEvent={requestPermission:async()=>{requested++;return 'granted';}};
+load('shake.js');assert.equal(requested,0,'wait for gesture on iOS');
+(async()=>{
+ await docListeners.click();assert.equal(requested,1);
+ sandbox.DeviceOrientationEvent.requestPermission=async()=> 'denied';load('shake.js');await docListeners.click();
+ assert.match(els.tiltStatus.textContent,/未允许/);assert.equal(G.getGravityTilt().target,0);
+ console.log('倾斜模式通过：自动监听、手势授权、拒绝回退、正负30度、重力模长、横竖屏、后台与数据中断');
+})().catch(err=>{console.error(err);process.exitCode=1;});

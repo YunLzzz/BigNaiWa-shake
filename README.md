@@ -1,8 +1,8 @@
-# 合成大奶娃 · 摇一摇改版
+# 合成大奶娃 · 倾斜重力版
 
-本仓库由 **YunLzzz** 基于 **[YHSome/BigNaiWa](https://github.com/YHSome/BigNaiWa)** 修改，原作者为 **[YHSome](https://github.com/YHSome)**。原版游戏、物理引擎和素材来自原项目；本改版新增手机摇一摇、运动权限开关及相关测试，保留原项目“仅供学习娱乐使用”的说明，不另行更改原作许可。页面中的赞助二维码仍属于原作者 YHSome。
+本仓库由 **YunLzzz** 基于 **[YHSome/BigNaiWa](https://github.com/YHSome/BigNaiWa)** 修改，原作者为 **[YHSome](https://github.com/YHSome)**。原版游戏、物理引擎和素材来自原项目；本改版新增默认启用的手机倾斜重力（±30°）及相关测试，保留原项目“仅供学习娱乐使用”的说明，不另行更改原作许可。页面中的赞助二维码仍属于原作者 YHSome。
 
-**本改版在线体验：[合成大奶娃 · 摇一摇](https://yunlzzz.github.io/BigNaiWa-shake/)**，原版体验：[YHSome 的原版](https://yhsome.github.io/BigNaiWa/)。下文保留原项目说明，其中原有技术说明与参考项目归原作者，新增功能详见文末。
+**本改版在线体验：[合成大奶娃 · 倾斜重力](https://yunlzzz.github.io/BigNaiWa-shake/)**，原版体验：[YHSome 的原版](https://yhsome.github.io/BigNaiWa/)。下文保留原项目说明，其中原有技术说明与参考项目归原作者，新增功能详见文末。
 
 
 纯 **HTML + CSS + JavaScript** 的静态网页小游戏，零依赖、零构建、离线可玩。
@@ -367,10 +367,10 @@ node physics.test.js                                   # 物理自检
 仅供学习娱乐使用。
 
 
-## 手机摇一摇（本地新增）
+## 手机倾斜重力
 
-触屏设备会显示“开启摇一摇”。点击后按浏览器提示允许运动权限，来回轻摇手机即可让已落地的奶蛙轻轻弹起、左右挪动，后续碰撞与合成沿用原有物理规则，不保证一定合成，也不会清除越线计时。每次成功触发间隔至少 2 秒；拖动瞄准、游戏结束、清场定格、打开排行榜或赞助弹窗、切到后台时不会扰动物体。再次点击可以关闭，刷新页面后需重新开启。
+倾斜手机会持续改变游戏重力方向，向左倾则向左滚，向右倾则向右滚，最多偏离屏幕竖直向下方向 ±30°，重力大小保持不变，并平滑过渡。手机端默认启用，没有开关和摇动冲量，也没有冷却；横竖屏会转换方向。不保证合成，原有碰撞和判负规则保留。
 
-手机应通过 HTTPS 访问（例如把修改后的文件部署到自己的 GitHub Pages）；普通局域网 HTTP 地址通常无法使用运动传感器。电脑 localhost 可用于模拟测试，不能代替真机测试。浏览器不支持、权限未允许或未收到传感器数据时，开关旁会显示原因，普通游戏操作仍可使用。运动权限说明：https://developer.mozilla.org/en-US/docs/Web/API/DeviceMotionEvent/requestPermission_static
+在 HTTPS 下，不需要显式权限的浏览器会自动接收方向数据；iOS 等要求手势授权的浏览器，会在首次点击游戏页面时请求方向权限，必须由玩家允许。拒绝、不支持或传感器暂不可用时保持竖直重力，页面显示提示。切换屏幕方向或切后台会重置重力，数据中断超过 1.5 秒时平滑回正。
 
-实现位于 `shake.js`（权限、重力过滤、双向摇动识别）与 `game.js` 的 `shakeBoard()`（有上限的速度扰动）。模拟测试运行 `node shake.test.js`，原有回归测试运行 `node gameplay.test.js` 和 `node physics.test.js`。目前已完成模拟运动事件、物理位移和响应式布局验证，实际手机灵敏度仍需真机体验。
+为兼容原有发布路径，`shake.js` 现已完全替换为倾斜传感器逻辑，不再提供摇一摇功能。`game.js` 的 `setGravityTilt()` 将输入限制在 ±30°；`shake.test.js` 现测试倾斜模式，使用 `node shake.test.js` 运行，另外运行 `node gameplay.test.js` 与 `node physics.test.js` 检查回归。

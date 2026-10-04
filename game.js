@@ -19,6 +19,15 @@
   const DROP_Y = 74;         // 待投放水果的高度
   const DANGER_Y = 142;      // 警戒线
 
+  const gravity = { angle: 0, target: 0, updatedAt: -Infinity };
+  function setGravityTilt(degrees) {
+    gravity.target = Number.isFinite(degrees) ? Math.max(-30, Math.min(30, degrees)) : 0;
+    gravity.updatedAt = performance.now();
+  }
+  function resetGravityTilt() {
+    gravity.angle = gravity.target = 0;
+    gravity.updatedAt = -Infinity;
+  }
   const GRAVITY   = 2600;    // px/s²
   const SUBSTEPS  = 3;       // 每帧物理子步
   const ITER      = 6;       // 每个子步的约束迭代次数
@@ -300,6 +309,11 @@
    * ------------------------------------------------------- */
 
   function stepPhysics(dt) {
+    // 连续改变重力向量，模长不变；约 0.12 秒平滑，避免传感器抖动。
+    if (document.hidden || performance.now() - gravity.updatedAt > 1500) gravity.target = 0;
+    gravity.angle += (gravity.target - gravity.angle) * (1 - Math.exp(-dt / 0.12));
+    const radians = gravity.angle * Math.PI / 180;
+    const gx = GRAVITY * Math.sin(radians), gy = GRAVITY * Math.cos(radians);
     const balls = state.balls;
     const merges = [];
     const contacts = [];      // 本子步的接触列表，用于弹性冲量
@@ -309,7 +323,8 @@
       const b = balls[i];
       b.px = b.x;
       b.py = b.y;
-      b.vy += GRAVITY * dt;
+      b.vx += gx * dt;
+      b.vy += gy * dt;
       b.pvx = b.vx;           // 求解前速度：弹性冲量用它来算，避免被约束“吃掉”
       b.pvy = b.vy;
       b.x += b.vx * dt;
@@ -775,7 +790,6 @@
   }
 
   function reset() {
-    lastShakeAt = -Infinity;
     state.balls.length = 0;
     state.particles.length = 0;
     state.floats.length = 0;
@@ -1203,22 +1217,6 @@
    *  输入
    * ------------------------------------------------------- */
 
-  // 只给已落地的物体一个有上限的冲量，后续位移与合成仍走原有物理求解。
-  let lastShakeAt = -Infinity;
-  function shakeBoard() {
-    const now = performance.now();
-    if (state.over || state.freeze > 0 || touchAiming || document.hidden ||
-        document.querySelector('.modal[aria-hidden="false"]') || now - lastShakeAt < 2000) return false;
-    const settled = state.balls.filter(b => !b.dead && b.landed);
-    if (!settled.length) return false;
-    lastShakeAt = now;
-    for (const b of settled) {
-      b.vx = clamp(b.vx + rand(-180, 180), -240, 240);
-      b.vy = clamp(b.vy - rand(220, 290), -320, 120);
-    }
-    return true;
-  }
-
   function pointerToX(clientX) {
     const rect = canvas.getBoundingClientRect();
     return (clientX - rect.left) * (W / rect.width);
@@ -1403,7 +1401,8 @@
 
   /* 调试句柄（控制台可用）：__DNW__.state / .reset() / .drop() / .FRUITS / .render() */
   window.__DNW__ = { state, reset, revive, settle, gameOver, tryDrop, stepPhysics, update, FRUITS,
-                     render, resizeCanvas, shapeOf, makeBall, paintRevives, addScore, shakeBoard,
+                     render, resizeCanvas, shapeOf, makeBall, paintRevives, addScore, setGravityTilt, resetGravityTilt,
+                     getGravityTilt: () => ({ ...gravity }),
                      MAX_BONUS, REVIVE_STEP,
                      blurReady: () => !!blurImg };
 })();

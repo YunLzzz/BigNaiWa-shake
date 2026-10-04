@@ -12,7 +12,7 @@
 <!-- ↓ Monetag 站点验证：把后台给的 meta 标签粘在下面这一行 ↓ -->
 
 <title>合成大奶娃</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=tilt1">
 </head>
 <body>
 
@@ -115,10 +115,7 @@
       </button>
     </div>
 
-    <div class="shake-controls" id="shakeControls" hidden>
-      <button class="btn" id="shakeBtn" type="button" aria-pressed="false" aria-describedby="shakeStatus">📳 开启摇一摇</button>
-      <span id="shakeStatus" role="status" aria-live="polite">卡住了？轻摇手机试试</span>
-    </div>
+    <p class="tilt-status" id="tiltStatus" role="status" hidden>倾斜手机改变重力 · 最大 ±30°</p>
 
     <p class="tips">
       鼠标：移动瞄准、点击投放；触屏：拖动瞄准、松手投放。<br>
@@ -126,7 +123,7 @@
       每 <strong>2000 分</strong>攒一枚<strong>复活币</strong>，只在本局有效。
     </p>
 
-    <p class="attribution">原作：<a href="https://github.com/YHSome/BigNaiWa" target="_blank" rel="noopener noreferrer">YHSome / BigNaiWa</a> · <a href="https://github.com/YunLzzz/BigNaiWa-shake" target="_blank" rel="noopener noreferrer">摇一摇改版：YunLzzz</a></p>
+    <p class="attribution">原作：<a href="https://github.com/YHSome/BigNaiWa" target="_blank" rel="noopener noreferrer">YHSome / BigNaiWa</a> · <a href="https://github.com/YunLzzz/BigNaiWa-shake" target="_blank" rel="noopener noreferrer">倾斜重力版：YunLzzz</a></p>
   </aside>
 
 </main>
@@ -176,8 +173,8 @@
 <script src="assets/fruits/parts.js"></script>
 <!-- 极模糊占位图（内联 data URL，由 tools/make_blur.py 产出）：贴图没到位时先画它 -->
 <script src="assets/fruits/blur.js"></script>
-<script src="game.js"></script>
-<script src="shake.js"></script>
+<script src="game.js?v=tilt1"></script>
+<script src="shake.js?v=tilt1"></script>
 <!-- 排行榜 -->
 <script src="leaderboard.min.js"></script>
 <!-- 赞助作者 -->
