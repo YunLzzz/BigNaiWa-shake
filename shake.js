@@ -11,7 +11,7 @@
     status.textContent = '当前浏览器无法使用倾斜感应 · 保持竖直重力';
     return;
   }
-  const readyText = '倾斜手机改变重力 · 最大 ±30°';
+  const readyText = '倾斜手机改变重力 · 最大 ±45°';
   let received = false, timer;
   function armTimeout() {
     clearTimeout(timer);
@@ -42,7 +42,7 @@
   window.addEventListener('orientationchange', reset);
   window.screen?.orientation?.addEventListener('change', reset);
   if (typeof Orientation.requestPermission === 'function') {
-    status.textContent = '首次触摸游戏时允许方向权限 · 最大 ±30°';
+    status.textContent = '首次触摸游戏时允许方向权限 · 最大 ±45°';
     // 浏览器要求可信用户手势；无需单独的开启按钮。
     document.addEventListener('click', async () => {
       if (received) return;

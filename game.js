@@ -21,7 +21,7 @@
 
   const gravity = { angle: 0, target: 0, updatedAt: -Infinity };
   function setGravityTilt(degrees) {
-    gravity.target = Number.isFinite(degrees) ? Math.max(-30, Math.min(30, degrees)) : 0;
+    gravity.target = Number.isFinite(degrees) ? Math.max(-45, Math.min(45, degrees)) : 0;
     gravity.updatedAt = performance.now();
   }
   function resetGravityTilt() {
@@ -290,6 +290,7 @@
       bornAt: performance.now(),
       overTime: 0,
       landed: false,
+      tiltReady: false, // 首次碰到地面或其他奶蛙后，才接受倾斜重力
       dead: false,
       contacts: 0,
       pvx: 0, pvy: 0,          // 本子步求解前的速度（用于弹性冲量）
@@ -323,8 +324,8 @@
       const b = balls[i];
       b.px = b.x;
       b.py = b.y;
-      b.vx += gx * dt;
-      b.vy += gy * dt;
+      b.vx += (b.tiltReady ? gx : 0) * dt;
+      b.vy += (b.tiltReady ? gy : GRAVITY) * dt;
       b.pvx = b.vx;           // 求解前速度：弹性冲量用它来算，避免被约束“吃掉”
       b.pvy = b.vy;
       b.x += b.vx * dt;
@@ -356,6 +357,7 @@
         if (pushL || pushR || pushFloor || pushCeil) {
           b.x += pushL - pushR;
           b.y += pushCeil - pushFloor;
+          if (pushFloor > 0) b.tiltReady = true;
           b.contacts++;
           if (it === 0) {
             if (pushL)     contacts.push({ ball: b, nx: 1,  ny: 0 });
@@ -409,6 +411,7 @@
 
           if (minGap > MERGE_PAD || minGap === 1e9) continue;
 
+          a.tiltReady = b.tiltReady = true;
           if (a.tier === b.tier && it === 0) {
             a.dead = true;
             b.dead = true;
@@ -450,6 +453,7 @@
       if (pushL || pushR || pushFloor || pushCeil) {
         b.x += pushL - pushR;
         b.y += pushCeil - pushFloor;
+        if (pushFloor > 0) b.tiltReady = true;
         b.contacts++;
         syncParts(b);
       }
@@ -567,6 +571,7 @@
         nb.px = nb.x;
         nb.py = nb.y;
         nb.landed = true;
+        nb.tiltReady = true;
         nb.popAt = performance.now();
         state.balls.push(nb);
 
